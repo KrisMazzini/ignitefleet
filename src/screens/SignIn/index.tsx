@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Realm, useApp } from '@realm/react'
 import { GoogleSignin } from '@react-native-google-signin/google-signin'
 
 import backgroundImg from '../../assets/background.png'
@@ -16,6 +17,7 @@ GoogleSignin.configure({
 })
 
 export function SignIn() {
+  const app = useApp()
   const [isAuthenticating, setIsAuthenticating] = useState(false)
 
   async function handleGoogleSignIn() {
@@ -30,7 +32,8 @@ export function SignIn() {
         return
       }
 
-      console.log(idToken)
+      const credentials = Realm.Credentials.jwt(idToken)
+      await app.logIn(credentials)
     } catch (error) {
       console.log(error)
       setIsAuthenticating(false)
