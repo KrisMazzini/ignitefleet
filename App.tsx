@@ -14,6 +14,7 @@ import theme from './src/theme'
 
 import { REALM_APP_ID } from '@env'
 
+import { RealmProvider } from './src/libs/realm'
 import { Routes } from './src/routes'
 
 import { SignIn } from './src/screens/SignIn'
@@ -34,7 +35,9 @@ export default function App() {
 
           {fontsLoaded ? (
             <UserProvider fallback={SignIn}>
-              <Routes />
+              <RealmProvider>
+                <Routes />
+              </RealmProvider>
             </UserProvider>
           ) : (
             <Loading />
