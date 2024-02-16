@@ -1,5 +1,6 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -13,14 +14,38 @@ import { LicensePlateInput } from '../../components/LicensePlateInput'
 import { TextAreaInput } from '../../components/TextAreaInput'
 import { Button } from '../../components/Button'
 
+import { validateLicensePlate } from '../../utils/licensePlateValidation'
+
 const keyboardAvoidingViewBehavior =
   Platform.OS === 'android' ? 'height' : 'padding'
 
 export function Departure() {
+  const [licensePlate, setLicensePlate] = useState('')
+  const [description, setDescription] = useState('')
+
+  const licensePlateRef = useRef<TextInput>(null)
   const descriptionRef = useRef<TextInput>(null)
 
   function handleRegisterDeparture() {
-    console.log('Registrar saída')
+    const validLicensePlate = validateLicensePlate(licensePlate)
+
+    if (!validLicensePlate) {
+      licensePlateRef.current?.focus()
+
+      return Alert.alert(
+        'Placa inválida',
+        'A placa informada é inválida. Por favor, informe a placa correta do veículo.',
+      )
+    }
+
+    if (description.trim().length === 0) {
+      descriptionRef.current?.focus()
+
+      return Alert.alert(
+        'Finalidade',
+        'Por favor, informe a finalidade da utilização do veículo.',
+      )
+    }
   }
 
   return (
@@ -34,10 +59,13 @@ export function Departure() {
         <ScrollView>
           <Content>
             <LicensePlateInput
+              ref={licensePlateRef}
               label="Placa do veículo:"
               placeholder="BRA1234"
               onSubmitEditing={() => descriptionRef.current?.focus()}
               returnKeyType="next"
+              value={licensePlate}
+              onChangeText={setLicensePlate}
             />
 
             <TextAreaInput
@@ -47,6 +75,8 @@ export function Departure() {
               blurOnSubmit
               onSubmitEditing={handleRegisterDeparture}
               returnKeyType="send"
+              value={description}
+              onChangeText={setDescription}
             />
 
             <Button title="Registrar Saída" onPress={handleRegisterDeparture} />
