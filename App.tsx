@@ -1,4 +1,6 @@
 /* eslint-disable camelcase */
+import 'react-native-get-random-values'
+
 import { StatusBar } from 'react-native'
 import { ThemeProvider } from 'styled-components'
 import { AppProvider, UserProvider } from '@realm/react'
