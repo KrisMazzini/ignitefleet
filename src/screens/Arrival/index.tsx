@@ -72,7 +72,9 @@ export function Arrival() {
 
   return (
     <Container>
-      <Header title="Chegada" />
+      <Header
+        title={history?.status === 'departure' ? 'Chegada' : 'Detalhes'}
+      />
 
       <Content>
         <Label>Placa do veículo</Label>
@@ -81,10 +83,12 @@ export function Arrival() {
         <Label>Finalidade</Label>
         <Description>{history?.description}</Description>
 
-        <Footer>
-          <ButtonIcon icon={X} onPress={handleCancelVehicleUsage} />
-          <Button title="Registrar Chegada" onPress={handleRegisterArrival} />
-        </Footer>
+        {history?.status === 'departure' && (
+          <Footer>
+            <ButtonIcon icon={X} onPress={handleCancelVehicleUsage} />
+            <Button title="Registrar Chegada" onPress={handleRegisterArrival} />
+          </Footer>
+        )}
       </Content>
     </Container>
   )

@@ -1,5 +1,6 @@
 /* eslint-disable camelcase */
 import 'react-native-get-random-values'
+import './src/libs/dayjs'
 
 import { StatusBar } from 'react-native'
 import { ThemeProvider } from 'styled-components'

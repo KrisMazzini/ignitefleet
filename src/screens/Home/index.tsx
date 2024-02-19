@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react'
-import { Alert } from 'react-native'
+import { Alert, FlatList } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 
-import { Container, Content } from './styles'
+import { Container, Content, Label, Title } from './styles'
 
 import { CarStatus } from '../../components/CarStatus'
 import { HomeHeader } from '../../components/HomeHeader'
+import { HistoryCard, HistoryCardProps } from '../../components/HistoryCard'
 
 import { useQuery, useRealm } from '../../libs/realm'
 import { History } from '../../libs/realm/schemas/History'
 
 export function Home() {
+  const [vehicleHistory, setVehicleHistory] = useState<HistoryCardProps[]>([])
   const [vehicleInUse, setVehicleInUse] = useState<History | null>(null)
+
   const { navigate } = useNavigation()
 
   const history = useQuery(History)
@@ -23,6 +26,10 @@ export function Home() {
     }
 
     navigate('departure')
+  }
+
+  function handleHistoryDetails(historyId: string) {
+    navigate('arrival', { id: historyId })
   }
 
   useEffect(() => {
@@ -46,6 +53,39 @@ export function Home() {
     return () => realm.removeListener('change', fetchVehicleInUse)
   }, [realm, history])
 
+  useEffect(() => {
+    function fetchHistory() {
+      try {
+        const vehicles = history.filtered(
+          "status = 'arrival' SORT(created_at DESC)",
+        )
+
+        const formattedVehicles = vehicles.map((vehicle) => {
+          return {
+            id: vehicle._id.toString(),
+            licensePlate: vehicle.license_plate,
+            createdAt: vehicle.created_at,
+            isSynced: false,
+          }
+        })
+
+        setVehicleHistory(formattedVehicles)
+      } catch (error) {
+        console.log(error)
+
+        Alert.alert(
+          'Histórico',
+          'Não foi possível carregar o histórico de veículos.',
+        )
+      }
+    }
+
+    fetchHistory()
+
+    realm.addListener('change', fetchHistory)
+    return () => realm.removeListener('change', fetchHistory)
+  }, [realm, history])
+
   return (
     <Container>
       <HomeHeader />
@@ -54,6 +94,24 @@ export function Home() {
         <CarStatus
           licensePlate={vehicleInUse?.license_plate}
           onPress={handleRegisterMovement}
+        />
+
+        <Title>Histórico</Title>
+
+        <FlatList
+          data={vehicleHistory}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <HistoryCard
+              data={item}
+              onPress={() => handleHistoryDetails(item.id)}
+            />
+          )}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          ListEmptyComponent={() => (
+            <Label>Nenhum registro de utilização.</Label>
+          )}
         />
       </Content>
     </Container>
