@@ -7,7 +7,7 @@ import { Container, Content } from './styles'
 import { CarStatus } from '../../components/CarStatus'
 import { HomeHeader } from '../../components/HomeHeader'
 
-import { useQuery } from '../../libs/realm'
+import { useQuery, useRealm } from '../../libs/realm'
 import { History } from '../../libs/realm/schemas/History'
 
 export function Home() {
@@ -15,6 +15,7 @@ export function Home() {
   const { navigate } = useNavigation()
 
   const history = useQuery(History)
+  const realm = useRealm()
 
   function handleRegisterMovement() {
     if (vehicleInUse?._id) {
@@ -40,7 +41,10 @@ export function Home() {
     }
 
     fetchVehicleInUse()
-  }, [history])
+
+    realm.addListener('change', fetchVehicleInUse)
+    return () => realm.removeListener('change', fetchVehicleInUse)
+  }, [realm, history])
 
   return (
     <Container>
