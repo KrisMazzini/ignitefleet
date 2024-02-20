@@ -50,7 +50,12 @@ export function Home() {
     fetchVehicleInUse()
 
     realm.addListener('change', fetchVehicleInUse)
-    return () => realm.removeListener('change', fetchVehicleInUse)
+
+    return () => {
+      if (realm && !realm.isClosed) {
+        realm.removeListener('change', fetchVehicleInUse)
+      }
+    }
   }, [realm, history])
 
   useEffect(() => {
@@ -83,7 +88,12 @@ export function Home() {
     fetchHistory()
 
     realm.addListener('change', fetchHistory)
-    return () => realm.removeListener('change', fetchHistory)
+
+    return () => {
+      if (realm && !realm.isClosed) {
+        realm.removeListener('change', fetchHistory)
+      }
+    }
   }, [realm, history])
 
   return (
