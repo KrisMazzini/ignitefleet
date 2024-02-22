@@ -17,7 +17,7 @@ import theme from './src/theme'
 
 import { REALM_APP_ID } from '@env'
 
-import { RealmProvider } from './src/libs/realm'
+import { RealmProvider, syncConfig } from './src/libs/realm'
 import { Routes } from './src/routes'
 
 import { SignIn } from './src/screens/SignIn'
@@ -40,7 +40,7 @@ export default function App() {
 
           {fontsLoaded ? (
             <UserProvider fallback={SignIn}>
-              <RealmProvider>
+              <RealmProvider sync={syncConfig} fallback={Loading}>
                 <Routes />
               </RealmProvider>
             </UserProvider>
