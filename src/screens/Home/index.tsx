@@ -1,20 +1,28 @@
 import { useEffect, useState } from 'react'
 import { Alert, FlatList } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
-import { useUser } from '@realm/react'
+import { Realm, useUser } from '@realm/react'
+import { CloudArrowUp } from 'phosphor-react-native'
+import Toast from 'react-native-toast-message'
 
 import { Container, Content, Label, Title } from './styles'
 
 import { CarStatus } from '../../components/CarStatus'
 import { HomeHeader } from '../../components/HomeHeader'
 import { HistoryCard, HistoryCardProps } from '../../components/HistoryCard'
+import { TopMessage } from '../../components/TopMessage'
 
 import { useQuery, useRealm } from '../../libs/realm'
 import { History } from '../../libs/realm/schemas/History'
+import {
+  getLastSyncTimestamp,
+  saveLastSyncTimestamp,
+} from '../../libs/asyncStorage/syncStorage'
 
 export function Home() {
   const [vehicleHistory, setVehicleHistory] = useState<HistoryCardProps[]>([])
   const [vehicleInUse, setVehicleInUse] = useState<History | null>(null)
+  const [percentageToSync, setPercentageToSync] = useState<string | null>(null)
 
   const { navigate } = useNavigation()
 
@@ -32,6 +40,34 @@ export function Home() {
 
   function handleHistoryDetails(historyId: string) {
     navigate('arrival', { id: historyId })
+  }
+
+  async function fetchHistory() {
+    try {
+      const vehicles = history.filtered(
+        "status = 'arrival' SORT(created_at DESC)",
+      )
+
+      const lastSync = await getLastSyncTimestamp()
+
+      const formattedVehicles = vehicles.map((vehicle) => {
+        return {
+          id: vehicle._id.toString(),
+          licensePlate: vehicle.license_plate,
+          createdAt: vehicle.created_at,
+          isSynced: !!lastSync && lastSync > vehicle.updated_at.getTime(),
+        }
+      })
+
+      setVehicleHistory(formattedVehicles)
+    } catch (error) {
+      console.log(error)
+
+      Alert.alert(
+        'Histórico',
+        'Não foi possível carregar o histórico de veículos.',
+      )
+    }
   }
 
   useEffect(() => {
@@ -61,32 +97,6 @@ export function Home() {
   }, [realm, history])
 
   useEffect(() => {
-    function fetchHistory() {
-      try {
-        const vehicles = history.filtered(
-          "status = 'arrival' SORT(created_at DESC)",
-        )
-
-        const formattedVehicles = vehicles.map((vehicle) => {
-          return {
-            id: vehicle._id.toString(),
-            licensePlate: vehicle.license_plate,
-            createdAt: vehicle.created_at,
-            isSynced: false,
-          }
-        })
-
-        setVehicleHistory(formattedVehicles)
-      } catch (error) {
-        console.log(error)
-
-        Alert.alert(
-          'Histórico',
-          'Não foi possível carregar o histórico de veículos.',
-        )
-      }
-    }
-
     fetchHistory()
 
     realm.addListener('change', fetchHistory)
@@ -96,6 +106,7 @@ export function Home() {
         realm.removeListener('change', fetchHistory)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [realm, history])
 
   useEffect(() => {
@@ -108,8 +119,51 @@ export function Home() {
     })
   }, [realm, user.id])
 
+  useEffect(() => {
+    async function progressNotification(
+      transferred: number,
+      transferable: number,
+    ) {
+      const transferPercentage = (transferred / transferable) * 100
+
+      if (transferPercentage === 100) {
+        await saveLastSyncTimestamp()
+        await fetchHistory()
+        setPercentageToSync(null)
+
+        Toast.show({
+          type: 'info',
+          text1: 'Todos os dados estão sincronizados.',
+        })
+      }
+
+      if (transferPercentage < 100) {
+        setPercentageToSync(`${transferPercentage.toFixed(0)}% sincronizado.`)
+      }
+    }
+
+    const syncSession = realm.syncSession
+
+    if (!syncSession) {
+      return
+    }
+
+    syncSession.addProgressNotification(
+      Realm.ProgressDirection.Upload,
+      Realm.ProgressMode.ReportIndefinitely,
+      progressNotification,
+    )
+
+    return () => syncSession.removeProgressNotification(progressNotification)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realm.syncSession])
+
   return (
     <Container>
+      {percentageToSync && (
+        <TopMessage title={percentageToSync} icon={CloudArrowUp} />
+      )}
+
       <HomeHeader />
 
       <Content>
