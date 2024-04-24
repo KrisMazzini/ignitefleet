@@ -1,6 +1,14 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigation } from '@react-navigation/native'
 import { useUser } from '@realm/react'
+import { Car } from 'phosphor-react-native'
+import {
+  LocationAccuracy,
+  LocationObjectCoords,
+  LocationSubscription,
+  useForegroundPermissions,
+  watchPositionAsync,
+} from 'expo-location'
 import {
   Alert,
   KeyboardAvoidingView,
@@ -9,14 +17,19 @@ import {
   TextInput,
 } from 'react-native'
 
-import { Container, Content } from './styles'
+import { Container, Content, Message } from './styles'
 
 import { Header } from '../../components/Header'
 import { LicensePlateInput } from '../../components/LicensePlateInput'
 import { TextAreaInput } from '../../components/TextAreaInput'
 import { Button } from '../../components/Button'
+import { Loading } from '../../components/Loading'
+import { LocationInfo } from '../../components/LocationInfo'
+import { Map } from '../../components/Map'
 
 import { validateLicensePlate } from '../../utils/licensePlateValidation'
+import { getAddressLocation } from '../../utils/getAddressLocation'
+
 import { useRealm } from '../../libs/realm'
 import { History } from '../../libs/realm/schemas/History'
 
@@ -27,6 +40,13 @@ export function Departure() {
   const [licensePlate, setLicensePlate] = useState('')
   const [description, setDescription] = useState('')
   const [isRegistering, setIsRegistering] = useState(false)
+  const [isLoadingLocation, setIsLoadingLocation] = useState(true)
+  const [currentAddress, setCurrentAddress] = useState<string>('')
+  const [currentCoords, setCurrentCoords] =
+    useState<LocationObjectCoords | null>(null)
+
+  const [locationForegroundPermission, requestLocationForegroundPermission] =
+    useForegroundPermissions()
 
   const user = useUser()
   const realm = useRealm()
@@ -57,6 +77,13 @@ export function Departure() {
         )
       }
 
+      if (!currentCoords?.latitude && !currentCoords?.longitude) {
+        return Alert.alert(
+          'Localização',
+          'Não foi possível obter a localização atual do dispositivo. Por favor, verifique as configurações de localização do seu dispositivo.',
+        )
+      }
+
       setIsRegistering(true)
 
       realm.write(() => {
@@ -80,6 +107,57 @@ export function Departure() {
     }
   }
 
+  useEffect(() => {
+    requestLocationForegroundPermission()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!locationForegroundPermission?.granted) {
+      return
+    }
+
+    let subscription: LocationSubscription
+
+    watchPositionAsync(
+      {
+        accuracy: LocationAccuracy.High,
+        timeInterval: 1000,
+      },
+      (location) => {
+        setCurrentCoords(location.coords)
+
+        getAddressLocation(location.coords).then((address) => {
+          if (address) {
+            setCurrentAddress(address)
+          }
+        })
+      },
+    )
+      .then((response) => (subscription = response))
+      .finally(() => setIsLoadingLocation(false))
+
+    return () => subscription?.remove()
+  }, [locationForegroundPermission])
+
+  if (!locationForegroundPermission?.granted) {
+    return (
+      <Container>
+        <Header title="Saída" />
+
+        <Message>
+          Você precisa conceder permissão de localização para registrar a saída
+          do veículo. Por favor, acesse as configurações do seu dispositivo para
+          conceder essa permissão.
+        </Message>
+      </Container>
+    )
+  }
+
+  if (isLoadingLocation) {
+    return <Loading />
+  }
+
   return (
     <Container>
       <Header title="Saída" />
@@ -89,7 +167,17 @@ export function Departure() {
         behavior={keyboardAvoidingViewBehavior}
       >
         <ScrollView>
+          {currentCoords && <Map coordinates={[currentCoords]} />}
+
           <Content>
+            {currentAddress && (
+              <LocationInfo
+                icon={Car}
+                label="Localização atual"
+                description={currentAddress}
+              />
+            )}
+
             <LicensePlateInput
               ref={licensePlateRef}
               label="Placa do veículo:"
