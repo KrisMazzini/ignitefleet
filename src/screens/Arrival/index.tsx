@@ -22,6 +22,8 @@ import { getLastSyncTimestamp } from '../../libs/asyncStorage/syncStorage'
 import { useObject, useRealm } from '../../libs/realm'
 import { History } from '../../libs/realm/schemas/History'
 
+import { stopBackgroundLocationTask } from '../../tasks/backgroundLocationTask'
+
 type RouteParamsProps = {
   id: string
 }
@@ -37,7 +39,7 @@ export function Arrival() {
 
   const { goBack } = useNavigation()
 
-  function handleRegisterArrival() {
+  async function handleRegisterArrival() {
     try {
       if (!history) {
         return Alert.alert(
@@ -45,6 +47,8 @@ export function Arrival() {
           'Não foi possível obter os dados para registrar a chegada  do veículo.',
         )
       }
+
+      await stopBackgroundLocationTask()
 
       realm.write(() => {
         history.status = 'arrival'

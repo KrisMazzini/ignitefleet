@@ -6,6 +6,7 @@ import {
   LocationAccuracy,
   LocationObjectCoords,
   LocationSubscription,
+  requestBackgroundPermissionsAsync,
   useForegroundPermissions,
   watchPositionAsync,
 } from 'expo-location'
@@ -33,6 +34,8 @@ import { getAddressLocation } from '../../utils/getAddressLocation'
 import { useRealm } from '../../libs/realm'
 import { History } from '../../libs/realm/schemas/History'
 
+import { startBackgroundLocationTask } from '../../tasks/backgroundLocationTask'
+
 const keyboardAvoidingViewBehavior =
   Platform.OS === 'android' ? 'height' : 'padding'
 
@@ -55,7 +58,7 @@ export function Departure() {
   const licensePlateRef = useRef<TextInput>(null)
   const descriptionRef = useRef<TextInput>(null)
 
-  function handleRegisterDeparture() {
+  async function handleRegisterDeparture() {
     try {
       const validLicensePlate = validateLicensePlate(licensePlate)
 
@@ -85,6 +88,19 @@ export function Departure() {
       }
 
       setIsRegistering(true)
+
+      const backgroundPermissions = await requestBackgroundPermissionsAsync()
+
+      if (!backgroundPermissions.granted) {
+        setIsRegistering(false)
+
+        return Alert.alert(
+          'Localização',
+          'Você precisa conceder permissão de localização em segundo plano para registrar a saída do veículo. Por favor, acesse as configurações do seu dispositivo para conceder essa permissão',
+        )
+      }
+
+      await startBackgroundLocationTask()
 
       realm.write(() => {
         realm.create(
