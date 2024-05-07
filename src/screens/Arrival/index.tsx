@@ -95,6 +95,16 @@ export function Arrival() {
 
       setDataSynced(!!lastSync && !!updatedAt && lastSync > updatedAt)
 
+      if (history?.status === 'arrival') {
+        const coords = history?.coords.map((coord) => ({
+          latitude: coord.latitude,
+          longitude: coord.longitude,
+        }))
+
+        setCoordinates(coords ?? [])
+        return
+      }
+
       const storageLocations = await getStorageLocations()
       setCoordinates(storageLocations)
     }
