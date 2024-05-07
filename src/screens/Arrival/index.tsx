@@ -52,9 +52,12 @@ export function Arrival() {
         )
       }
 
+      const locations = await getStorageLocations()
+
       realm.write(() => {
         history.status = 'arrival'
         history.updated_at = new Date()
+        history.coords.push(...locations)
       })
 
       await stopBackgroundLocationTask()

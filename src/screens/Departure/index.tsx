@@ -106,9 +106,16 @@ export function Departure() {
         realm.create(
           'History',
           History.generate({
-            description,
             license_plate: licensePlate.toUpperCase(),
             user_id: user.id,
+            description,
+            coords: [
+              {
+                latitude: currentCoords.latitude,
+                longitude: currentCoords.longitude,
+                timestamp: new Date().getTime(),
+              },
+            ],
           }),
         )
       })
