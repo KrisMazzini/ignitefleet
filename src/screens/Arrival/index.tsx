@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { Alert } from 'react-native'
+import { LatLng } from 'react-native-maps'
 import { BSON } from 'realm'
 import { X } from 'phosphor-react-native'
 
@@ -17,8 +18,10 @@ import {
 import { Header } from '../../components/Header'
 import { Button } from '../../components/Button'
 import { ButtonIcon } from '../../components/ButtonIcon'
+import { Map } from '../../components/Map'
 
 import { getLastSyncTimestamp } from '../../libs/asyncStorage/syncStorage'
+import { getStorageLocations } from '../../libs/asyncStorage/locationStorage'
 import { useObject, useRealm } from '../../libs/realm'
 import { History } from '../../libs/realm/schemas/History'
 
@@ -30,6 +33,7 @@ type RouteParamsProps = {
 
 export function Arrival() {
   const [dataSynced, setDataSynced] = useState(true)
+  const [coordinates, setCoordinates] = useState<LatLng[]>([])
 
   const route = useRoute()
   const { id } = route.params as RouteParamsProps
@@ -48,12 +52,12 @@ export function Arrival() {
         )
       }
 
-      await stopBackgroundLocationTask()
-
       realm.write(() => {
         history.status = 'arrival'
         history.updated_at = new Date()
       })
+
+      await stopBackgroundLocationTask()
 
       Alert.alert('Chegada', 'Chegada registrada com sucesso.')
 
@@ -71,20 +75,28 @@ export function Arrival() {
     ])
   }
 
-  function cancelVehicleUsage() {
+  async function cancelVehicleUsage() {
     realm.write(() => {
       realm.delete(history)
     })
+
+    await stopBackgroundLocationTask()
 
     goBack()
   }
 
   useEffect(() => {
-    getLastSyncTimestamp().then((lastSync) =>
-      setDataSynced(
-        !!lastSync && !!history && lastSync > history?.updated_at.getTime(),
-      ),
-    )
+    async function getLocationsInfo() {
+      const lastSync = await getLastSyncTimestamp()
+      const updatedAt = history?.updated_at.getTime()
+
+      setDataSynced(!!lastSync && !!updatedAt && lastSync > updatedAt)
+
+      const storageLocations = await getStorageLocations()
+      setCoordinates(storageLocations)
+    }
+
+    getLocationsInfo()
   }, [history])
 
   return (
@@ -92,6 +104,8 @@ export function Arrival() {
       <Header
         title={history?.status === 'departure' ? 'Chegada' : 'Detalhes'}
       />
+
+      {coordinates.length > 0 && <Map coordinates={coordinates} />}
 
       <Content>
         <Label>Placa do veículo</Label>
