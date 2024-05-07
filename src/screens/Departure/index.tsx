@@ -18,7 +18,7 @@ import {
   TextInput,
 } from 'react-native'
 
-import { Container, Content, Message } from './styles'
+import { Container, Content, Message, MessageContent } from './styles'
 
 import { Header } from '../../components/Header'
 import { LicensePlateInput } from '../../components/LicensePlateInput'
@@ -30,6 +30,7 @@ import { Map } from '../../components/Map'
 
 import { validateLicensePlate } from '../../utils/licensePlateValidation'
 import { getAddressLocation } from '../../utils/getAddressLocation'
+import { openSettings } from '../../utils/openSettings'
 
 import { useRealm } from '../../libs/realm'
 import { History } from '../../libs/realm/schemas/History'
@@ -84,6 +85,7 @@ export function Departure() {
         return Alert.alert(
           'Localização',
           'Não foi possível obter a localização atual do dispositivo. Por favor, verifique as configurações de localização do seu dispositivo.',
+          [{ text: 'Abrir configurações', onPress: openSettings }],
         )
       }
 
@@ -168,11 +170,15 @@ export function Departure() {
       <Container>
         <Header title="Saída" />
 
-        <Message>
-          Você precisa conceder permissão de localização para registrar a saída
-          do veículo. Por favor, acesse as configurações do seu dispositivo para
-          conceder essa permissão.
-        </Message>
+        <MessageContent>
+          <Message>
+            Você precisa conceder permissão de localização para registrar a
+            saída do veículo. Por favor, acesse as configurações do seu
+            dispositivo para conceder essa permissão.
+          </Message>
+
+          <Button title="Abrir Configurações" onPress={openSettings} />
+        </MessageContent>
       </Container>
     )
   }
